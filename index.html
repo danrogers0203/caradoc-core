@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CARADOC CORE // 5-Year Sovereign Equity Vantage</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Babel CDN for inline JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            caradoc: {
+              bg: '#0A0D14',
+              surface: '#111622',
+              card: '#161D2B',
+              border: '#232D42',
+              emerald: '#10B981',
+              cyan: '#06B6D4',
+              amber: '#F59E0B',
+              rose: '#F43F5E'
+            }
+          },
+          fontFamily: {
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #0A0D14; color: #E2E8F0; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0D14; }
+    ::-webkit-scrollbar-thumb { background: #232D42; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #374151; }
+  </style>
+</head>
+<body class="selection:bg-cyan-500 selection:text-black">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo, useRef } = React;
+
+    // --- DEFAULT INITIAL STATE ---
+    const INITIAL_STOCKS = [
+      {
+        ticker: "CELH",
+        name: "Celsius Holdings Inc.",
+        price: 32.50,
+        shares: 235, // Millions
+        rev_m: 1480, // TTM Revenue ($M)
+        net_margin_ttm: 17.5,
+        forward_pe: 28.5,
+        fwd_peg: 1.25,
+        rev_cagr_3yr: 38.0,
+        gross_margin: 50.4,
+        operating_margin: 20.2,
+        net_margin: 17.5,
+        roic: 19.8,
+        cash_m: 880,
+        debt_m: 25,
+        fcf_m: 240,
+        dividend_yield: 0.0,
+        payout_ratio: 0.0,
+        proj: {
+          rev_cagr: 22.0,
+          target_margin: 19.0,
+          exit_pe: 28.0,
+          share_change_pct: 0.5,
+          hurdle_rate: 15.0
+        },
+        historical: {
+          years: ["2021", "2022", "2023", "2024", "2025"],
+          revenue: [314, 654, 1318, 1480, 1820],
+          netIncome: [4, -187, 226, 260, 345],
+          grossMargin: [41.2, 41.4, 48.0, 50.4, 51.5],
+          shares: [225, 230, 233, 235, 236]
+        }
+      },
+      {
+        ticker: "NVDA",
+        name: "NVIDIA Corporation",
+        price: 128.00,
+        shares: 24500,
+        rev_m: 96300,
+        net_margin_ttm: 54.0,
+        forward_pe: 34.0,
+        fwd_peg: 1.15,
+        rev_cagr_3yr: 72.0,
+        gross_margin: 75.0,
+        operating_margin: 62.0,
+        net_margin: 54.0,
+        roic: 58.0,
+        cash_m: 34800,
+        debt_m: 10000,
+        fcf_m: 48000,
+        dividend_yield: 0.03,
+        payout_ratio: 1.2,
+        proj: {
+          rev_cagr: 25.0,
+          target_margin: 50.0,
+          exit_pe: 30.0,
+          share_change_pct: -1.0,
+          hurdle_rate: 15.0
+        },
+        historical: {
+          years: ["2021", "2022", "2023", "2024", "2025"],
+          revenue: [26914, 26974, 60922, 96300, 128000],
+          netIncome: [9752, 4368, 29760, 52000, 64000],
+          grossMargin: [64.9, 56.9, 72.7, 75.0, 75.5],
+          shares: [25000, 24800, 24600, 24500, 24400]
+        }
+      },
+      {
+        ticker: "UL",
+        name: "Unilever PLC",
+        price: 58.50,
+        shares: 2500,
+        rev_m: 64800,
+        net_margin_ttm: 11.2,
+        forward_pe: 18.2,
+        fwd_peg: 2.40,
+        rev_cagr_3yr: 4.8,
+        gross_margin: 42.5,
+        operating_margin: 16.5,
+        net_margin: 11.2,
+        roic: 14.2,
+        cash_m: 5200,
+        debt_m: 26000,
+        fcf_m: 7100,
+        dividend_yield: 3.45,
+        payout_ratio: 62.0,
+        proj: {
+          rev_cagr: 4.5,
+          target_margin: 12.0,
+          exit_pe: 18.0,
+          share_change_pct: -1.5,
+          hurdle_rate: 10.0
+        },
+        historical: {
+          years: ["2021", "2022", "2023", "2024", "2025"],
+          revenue: [52400, 60000, 59600, 64800, 67500],
+          netIncome: [6000, 7600, 6500, 7250, 8100],
+          grossMargin: [41.5, 40.2, 42.1, 42.5, 43.0],
+          shares: [2580, 2550, 2520, 2500, 2480]
+        }
+      },
+      {
+        ticker: "PLTR",
+        name: "Palantir Technologies",
+        price: 44.00,
+        shares: 2260,
+        rev_m: 2560,
+        net_margin_ttm: 18.0,
+        forward_pe: 75.0,
+        fwd_peg: 2.80,
+        rev_cagr_3yr: 21.0,
+        gross_margin: 80.5,
+        operating_margin: 16.0,
+        net_margin: 18.0,
+        roic: 15.0,
+        cash_m: 4000,
+        debt_m: 250,
+        fcf_m: 780,
+        dividend_yield: 0.0,
+        payout_ratio: 0.0,
+        proj: {
+          rev_cagr: 26.0,
+          target_margin: 24.0,
+          exit_pe: 45.0,
+          share_change_pct: 1.5,
+          hurdle_rate: 15.0
+        },
+        historical: {
+          years: ["2021", "2022", "2023", "2024", "2025"],
+          revenue: [1540, 1906, 2225, 2560, 3200],
+          netIncome: [-520, -373, 210, 460, 768],
+          grossMargin: [78.0, 78.5, 79.8, 80.5, 81.0],
+          shares: [2050, 2150, 2210, 2260, 2290]
+        }
+      }
+    ];
+
+    // --- CALCULATION HELPERS ---
+    function calculateProjection(stock, customProj = null, years = 5) {
+      const p = customProj || stock.proj;
+      const t = years;
+      
+      const revTarget = stock.rev_m * Math.pow(1 + p.rev_cagr / 100, t);
+      const netTarget = revTarget * (p.target_margin / 100);
+      const capTarget = netTarget * p.exit_pe;
+      const sharesTarget = stock.shares * Math.pow(1 + p.share_change_pct / 100, t);
+      const targetPrice = sharesTarget > 0 ? (capTarget / sharesTarget) : 0;
+      
+      const totalReturn = stock.price > 0 ? ((targetPrice - stock.price) / stock.price) : 0;
+      const annualizedCAGR = stock.price > 0 && targetPrice > 0 
+        ? (Math.pow(targetPrice / stock.price, 1 / t) - 1) * 100 
+        : 0;
+
+      // Status
+      let status = "FAIR VALUE";
+      let statusColor = "text-amber-400 border-amber-500/30 bg-amber-500/10";
+      if (annualizedCAGR >= p.hurdle_rate) {
+        status = "UNDERVALUED";
+        statusColor = "text-emerald-400 border-emerald-500/30 bg-emerald-500/10";
+      } else if (annualizedCAGR < 5.0) {
+        status = "OVERPRICED";
+        statusColor = "text-rose-400 border-rose-500/30 bg-rose-500/10";
+      }
+
+      // Year-by-year points
+      const trajectory = [];
+      for (let y = 0; y <= t; y++) {
+        const rev = stock.rev_m * Math.pow(1 + p.rev_cagr / 100, y);
+        const net = rev * (p.target_margin / 100);
+        const cap = net * p.exit_pe;
+        const shs = stock.shares * Math.pow(1 + p.share_change_pct / 100, y);
+        const price = shs > 0 ? (cap / shs) : 0;
+        trajectory.push({
+          year: y,
+          rev: Math.round(rev),
+          net: Math.round(net),
+          cap: Math.round(cap),
+          shares: Math.round(shs),
+          price: Number(price.toFixed(2))
+        });
+      }
+
+      return {
+        targetPrice: Number(targetPrice.toFixed(2)),
+        revTarget: Math.round(revTarget),
+        netTarget: Math.round(netTarget),
+        capTarget: Math.round(capTarget),
+        totalReturn: (totalReturn * 100).toFixed(1),
+        annualizedCAGR: annualizedCAGR.toFixed(1),
+        status,
+        statusColor,
+        trajectory
+      };
+    }
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [stocks, setStocks] = useState(() => {
+        const saved = localStorage.getItem('caradoc_core_stocks_v1');
+        return saved ? JSON.parse(saved) : INITIAL_STOCKS;
+      });
+
+      const [activeTab, setActiveTab] = useState("vantage"); // vantage, showdown, engine, charts, leaps
+      const [selectedTicker, setSelectedTicker] = useState("CELH");
+      const [horizonYears, setHorizonYears] = useState(5);
+      const [apiKey, setApiKey] = useState(() => localStorage.getItem('caradoc_fmp_key') || '');
+      const [showSettings, setShowSettings] = useState(false);
+
+      // Save to localStorage
+      useEffect(() => {
+        localStorage.setItem('caradoc_core_stocks_v1', JSON.stringify(stocks));
+      }, [stocks]);
+
+      const currentStock = useMemo(() => {
+        return stocks.find(s => s.ticker === selectedTicker) || stocks[0];
+      }, [stocks, selectedTicker]);
+
+      const updateCurrentStockProj = (field, val) => {
+        setStocks(prev => prev.map(s => {
+          if (s.ticker === currentStock.ticker) {
+            return {
+              ...s,
+              proj: { ...s.proj, [field]: parseFloat(val) || 0 }
+            };
+          }
+          return s;
+        }));
+      };
+
+      return (
+        <div className="flex h-screen w-full bg-caradoc-bg text-slate-200 overflow-hidden font-sans">
+          {/* SIDEBAR NAVIGATION */}
+          <aside className="w-64 border-r border-caradoc-border bg-caradoc-surface flex flex-col justify-between shrink-0">
+            <div>
+              {/* BRAND HEADER */}
+              <div className="p-5 border-b border-caradoc-border flex items-center space-x-3">
+                <div className="w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center font-bold text-cyan-400 text-lg tracking-wider">
+                  C5
+                </div>
+                <div>
+                  <h1 className="text-sm font-bold tracking-widest text-white uppercase flex items-center gap-1.5">
+                    CARADOC <span className="text-cyan-400 text-xs px-1.5 py-0.5 rounded bg-cyan-950/60 border border-cyan-500/30">CORE</span>
+                  </h1>
+                  <p className="text-[10px] text-slate-400 tracking-wider">5-YR SOVEREIGN VANTAGE</p>
+                </div>
+              </div>
+
+              {/* TICKER QUICK-SELECT */}
+              <div className="px-4 py-3 border-b border-caradoc-border bg-caradoc-bg/40">
+                <label className="text-[10px] uppercase tracking-wider text-slate-400 font-semibold mb-1.5 block">Active Stock Focus</label>
+                <div className="grid grid-cols-2 gap-1.5">
+                  {stocks.map(s => (
+                    <button
+                      key={s.ticker}
+                      onClick={() => setSelectedTicker(s.ticker)}
+                      className={`px-2.5 py-1.5 rounded text-xs font-mono font-medium text-left transition flex items-center justify-between ${
+                        s.ticker === selectedTicker
+                          ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-sm'
+                          : 'bg-caradoc-card hover:bg-slate-800 text-slate-400 border border-transparent'
+                      }`}
+                    >
+                      <span>{s.ticker}</span>
+                      <span className="text-[10px] text-slate-400">${s.price}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* NAV LINKS */}
+              <nav className="p-3 space-y-1">
+                {[
+                  { id: "vantage", label: "Command Vantage", icon: "layout-grid", desc: "Overview & Undervalued Watch" },
+                  { id: "showdown", label: "3-Stock Showdown", icon: "columns-3", desc: "Head-to-head category matrix" },
+                  { id: "engine", label: "5-Year Engine", icon: "calculator", desc: "Scenario projections & CAGR" },
+                  { id: "charts", label: "Financial Bedrock", icon: "line-chart", desc: "Multi-year fundamentals" },
+                  { id: "leaps", label: "LEAPS Leverage", icon: "zap", desc: "Stock replacement strategy" },
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={`w-full text-left p-2.5 rounded-lg text-xs transition flex flex-col gap-0.5 ${
+                      activeTab === item.id
+                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 font-medium'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-caradoc-card/50'
+                    }`}
+                  >
+                    <div className="font-semibold text-slate-200">{item.label}</div>
+                    <div className="text-[10px] text-slate-400">{item.desc}</div>
+                  </button>
+                ))}
+              </nav>
+            </div>
+
+            {/* FOOTER SETTINGS */}
+            <div className="p-4 border-t border-caradoc-border bg-caradoc-surface/80 flex items-center justify-between">
+              <div className="text-[11px] text-slate-400 font-mono">
+                HORIZON: <span className="text-cyan-400 font-semibold">{horizonYears} YRS</span>
+              </div>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="text-xs text-slate-400 hover:text-white px-2 py-1 rounded bg-caradoc-card border border-caradoc-border flex items-center gap-1"
+              >
+                API Key
+              </button>
+            </div>
+          </aside>
+
+          {/* MAIN CONTENT AREA */}
+          <main className="flex-1 flex flex-col h-full overflow-y-auto">
+            {/* TOP HEADER STATUS */}
+            <header className="px-8 py-4 border-b border-caradoc-border bg-caradoc-surface/40 flex items-center justify-between sticky top-0 z-20 backdrop-blur-md">
+              <div className="flex items-center space-x-6">
+                <div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl font-bold font-mono text-white">{currentStock.ticker}</span>
+                    <span className="text-xs text-slate-400">{currentStock.name}</span>
+                    <span className="text-sm font-bold text-cyan-400 font-mono">${currentStock.price.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="h-6 w-px bg-caradoc-border hidden sm:block"></div>
+
+                {/* HORIZON SELECTOR */}
+                <div className="flex items-center space-x-1.5 bg-caradoc-card p-1 rounded-lg border border-caradoc-border">
+                  {[3, 5, 10].map(yr => (
+                    <button
+                      key={yr}
+                      onClick={() => setHorizonYears(yr)}
+                      className={`px-2.5 py-1 text-xs rounded font-medium transition ${
+                        horizonYears === yr
+                          ? 'bg-cyan-500 text-black font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      {yr}Y
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* SYSTEM PERSISTENCE / SYNC BADGE */}
+              <div className="flex items-center space-x-3 text-xs">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  SOVEREIGN VAULT: LOCAL ACTIVE
+                </span>
+              </div>
+            </header>
+
+            {/* TAB PANELS */}
+            <div className="p-8 space-y-8 flex-1">
+              {activeTab === "vantage" && (
+                <VantageView stocks={stocks} horizon={horizonYears} onSelectTicker={setSelectedTicker} />
+              )}
+              {activeTab === "showdown" && (
+                <ShowdownView stocks={stocks} />
+              )}
+              {activeTab === "engine" && (
+                <EngineView 
+                  stock={currentStock} 
+                  horizon={horizonYears} 
+                  onChange={updateCurrentStockProj} 
+                />
+              )}
+              {activeTab === "charts" && (
+                <ChartsView stock={currentStock} />
+              )}
+              {activeTab === "leaps" && (
+                <LeapsView stock={currentStock} horizon={horizonYears} />
+              )}
+            </div>
+          </main>
+
+          {/* API SETTINGS MODAL */}
+          {showSettings && (
+            <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-caradoc-surface border border-caradoc-border rounded-xl p-6 max-w-md w-full space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Live API Gateway</h3>
+                  <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-white">✕</button>
+                </div>
+                <p className="text-xs text-slate-400">
+                  Enter your free <strong>Financial Modeling Prep (FMP)</strong> API key to fetch live 5-year financials and balance sheets for any ticker worldwide.
+                </p>
+                <div>
+                  <label className="text-[11px] uppercase tracking-wider text-slate-400 block mb-1">FMP Key</label>
+                  <input
+                    type="password"
+                    value={apiKey}
+                    onChange={(e) => {
+                      setApiKey(e.target.value);
+                      localStorage.setItem('caradoc_fmp_key', e.target.value);
+                    }}
+                    placeholder="e.g. 748b9f..."
+                    className="w-full bg-caradoc-card border border-caradoc-border px-3 py-2 rounded text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+                <div className="pt-2 flex justify-end">
+                  <button
+                    onClick={() => setShowSettings(false)}
+                    className="px-4 py-1.5 bg-cyan-500 text-black text-xs font-semibold rounded hover:bg-cyan-400 transition"
+                  >
+                    Save & Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // --- MODULE 1: VANTAGE COMMAND CENTER ("Dopamine Page") ---
+    function VantageView({ stocks, horizon, onSelectTicker }) {
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-lg font-bold text-white tracking-wide">COMMAND VANTAGE</h2>
+              <p className="text-xs text-slate-400">Multi-equity overview against required return hurdles over a {horizon}-year horizon.</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stocks.map(stock => {
+              const res = calculateProjection(stock, null, horizon);
+              return (
+                <div
+                  key={stock.ticker}
+                  onClick={() => onSelectTicker(stock.ticker)}
+                  className="bg-caradoc-surface border border-caradoc-border hover:border-cyan-500/40 p-5 rounded-xl cursor-pointer transition shadow-lg relative overflow-hidden group"
+                >
+                  <div className="flex justify-between items-start mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg font-bold font-mono text-white group-hover:text-cyan-400 transition">{stock.ticker}</span>
+                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold ${res.statusColor}`}>
+                          {res.status}
+                        </span>
+                      </div>
+                      <span className="text-xs text-slate-400 line-clamp-1">{stock.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-sm font-mono font-bold text-white">${stock.price.toFixed(2)}</div>
+                      <div className="text-[10px] text-slate-400">Current Price</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 py-3 my-2 border-y border-caradoc-border/50 text-center font-mono">
+                    <div>
+                      <div className="text-[10px] text-slate-400">{horizon}Y Target</div>
+                      <div className="text-xs font-bold text-cyan-400">${res.targetPrice}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-400">Total Gain</div>
+                      <div className={`text-xs font-bold ${parseFloat(res.totalReturn) >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                        {res.totalReturn}%
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-slate-400">Ann. CAGR</div>
+                      <div className={`text-xs font-bold ${parseFloat(res.annualizedCAGR) >= stock.proj.hurdle_rate ? 'text-emerald-400' : 'text-amber-400'}`}>
+                        {res.annualizedCAGR}%
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-center text-[11px] text-slate-400 pt-1">
+                    <span>Hurdle Rate: <span className="text-slate-300 font-mono">{stock.proj.hurdle_rate}%</span></span>
+                    <span>Exit P/E: <span className="text-slate-300 font-mono">{stock.proj.exit_pe}x</span></span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 2: 3-STOCK SHOWDOWN MATRIX ---
+    function ShowdownView({ stocks }) {
+      const [t1, setT1] = useState(stocks[0]?.ticker || "CELH");
+      const [t2, setT2] = useState(stocks[1]?.ticker || "NVDA");
+      const [t3, setT3] = useState(stocks[2]?.ticker || "UL");
+
+      const s1 = stocks.find(s => s.ticker === t1) || stocks[0];
+      const s2 = stocks.find(s => s.ticker === t2) || stocks[1];
+      const s3 = stocks.find(s => s.ticker === t3) || stocks[2];
+
+      const metrics = [
+        { label: "Current Stock Price", k: "price", format: v => `$${v.toFixed(2)}`, better: 'none' },
+        { label: "Market Cap ($M)", k: "cap", custom: s => s.shares * s.price, format: v => `$${Math.round(v).toLocaleString()}M`, better: 'none' },
+        { label: "Forward P/E", k: "forward_pe", format: v => `${v}x`, better: 'low' },
+        { label: "Forward PEG Ratio", k: "fwd_peg", format: v => `${v}`, better: 'low' },
+        { label: "3-Yr Revenue CAGR", k: "rev_cagr_3yr", format: v => `${v}%`, better: 'high' },
+        { label: "Gross Profit Margin", k: "gross_margin", format: v => `${v}%`, better: 'high' },
+        { label: "Operating Margin", k: "operating_margin", format: v => `${v}%`, better: 'high' },
+        { label: "Net Profit Margin (TTM)", k: "net_margin", format: v => `${v}%`, better: 'high' },
+        { label: "ROIC (Return on Capital)", k: "roic", format: v => `${v}%`, better: 'high' },
+        { label: "Cash & Equivalents ($M)", k: "cash_m", format: v => `$${v}M`, better: 'high' },
+        { label: "Total Debt ($M)", k: "debt_m", format: v => `$${v}M`, better: 'low' },
+        { label: "Free Cash Flow ($M)", k: "fcf_m", format: v => `$${v}M`, better: 'high' },
+        { label: "Dividend Yield", k: "dividend_yield", format: v => `${v}%`, better: 'high' }
+      ];
+
+      // Calculate score winners
+      let score1 = 0, score2 = 0, score3 = 0;
+      metrics.forEach(m => {
+        if (m.better === 'none') return;
+        const v1 = m.custom ? m.custom(s1) : s1[m.k];
+        const v2 = m.custom ? m.custom(s2) : s2[m.k];
+        const v3 = m.custom ? m.custom(s3) : s3[m.k];
+        const best = m.better === 'high' ? Math.max(v1, v2, v3) : Math.min(v1, v2, v3);
+        if (v1 === best) score1++;
+        if (v2 === best) score2++;
+        if (v3 === best) score3++;
+      });
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white tracking-wide">3-STOCK SHOWDOWN MATRIX</h2>
+            <p className="text-xs text-slate-400">Head-to-head multi-variable fundamental battle. Green highlights mark category winners.</p>
+          </div>
+
+          {/* SCOREBOARD HERO */}
+          <div className="grid grid-cols-3 gap-4">
+            {[
+              { s: s1, set: setT1, score: score1 },
+              { s: s2, set: setT2, score: score2 },
+              { s: s3, set: setT3, score: score3 }
+            ].map(({ s, set, score }, idx) => (
+              <div key={idx} className="bg-caradoc-surface border border-caradoc-border p-4 rounded-xl flex flex-col items-center">
+                <select
+                  value={s.ticker}
+                  onChange={(e) => set(e.target.value)}
+                  className="bg-caradoc-card border border-caradoc-border text-cyan-400 font-mono font-bold px-3 py-1.5 rounded text-sm mb-2 focus:outline-none focus:border-cyan-500"
+                >
+                  {stocks.map(st => <option key={st.ticker} value={st.ticker}>{st.ticker} - {st.name}</option>)}
+                </select>
+                <div className="text-[10px] text-slate-400 uppercase tracking-widest">Category Wins</div>
+                <div className="text-2xl font-mono font-extrabold text-white mt-1">
+                  {score} <span className="text-xs text-slate-400 font-normal">/ 11</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* MATRIX TABLE */}
+          <div className="bg-caradoc-surface border border-caradoc-border rounded-xl overflow-hidden shadow-xl">
+            <table className="w-full text-xs text-left">
+              <thead className="bg-caradoc-card/80 border-b border-caradoc-border text-slate-400 uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="p-3.5 pl-5">Metric / Factor</th>
+                  <th className="p-3.5 font-mono text-center">{s1.ticker}</th>
+                  <th className="p-3.5 font-mono text-center">{s2.ticker}</th>
+                  <th className="p-3.5 font-mono text-center">{s3.ticker}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-caradoc-border/50">
+                {metrics.map(m => {
+                  const v1 = m.custom ? m.custom(s1) : s1[m.k];
+                  const v2 = m.custom ? m.custom(s2) : s2[m.k];
+                  const v3 = m.custom ? m.custom(s3) : s3[m.k];
+                  const best = m.better === 'none' ? null : (m.better === 'high' ? Math.max(v1, v2, v3) : Math.min(v1, v2, v3));
+
+                  return (
+                    <tr key={m.label} className="hover:bg-caradoc-card/40 transition">
+                      <td className="p-3.5 pl-5 font-medium text-slate-300">{m.label}</td>
+                      <td className={`p-3.5 text-center font-mono ${best !== null && v1 === best ? 'text-emerald-400 font-bold bg-emerald-500/5' : 'text-slate-300'}`}>
+                        {m.format(v1)}
+                      </td>
+                      <td className={`p-3.5 text-center font-mono ${best !== null && v2 === best ? 'text-emerald-400 font-bold bg-emerald-500/5' : 'text-slate-300'}`}>
+                        {m.format(v2)}
+                      </td>
+                      <td className={`p-3.5 text-center font-mono ${best !== null && v3 === best ? 'text-emerald-400 font-bold bg-emerald-500/5' : 'text-slate-300'}`}>
+                        {m.format(v3)}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 3: 5-YEAR VALUATION & PROJECTION ENGINE ---
+    function EngineView({ stock, horizon, onChange }) {
+      const baseRes = calculateProjection(stock, stock.proj, horizon);
+      
+      const bullProj = {
+        ...stock.proj,
+        rev_cagr: stock.proj.rev_cagr + 5,
+        target_margin: stock.proj.target_margin + 3,
+        exit_pe: stock.proj.exit_pe + 5
+      };
+      const bullRes = calculateProjection(stock, bullProj, horizon);
+
+      const bearProj = {
+        ...stock.proj,
+        rev_cagr: Math.max(0, stock.proj.rev_cagr - 6),
+        target_margin: Math.max(2, stock.proj.target_margin - 3),
+        exit_pe: Math.max(8, stock.proj.exit_pe - 6)
+      };
+      const bearRes = calculateProjection(stock, bearProj, horizon);
+
+      return (
+        <div className="space-y-6">
+          <div className="flex justify-between items-end">
+            <div>
+              <h2 className="text-lg font-bold text-white tracking-wide">5-YEAR VALUATION & PROJECTION ENGINE</h2>
+              <p className="text-xs text-slate-400">Model forward intrinsic value, multiple expansion, and annual share buybacks/dilution.</p>
+            </div>
+            <div className="text-xs font-mono text-cyan-400 bg-cyan-950/60 border border-cyan-500/30 px-3 py-1 rounded">
+              Current Base: ${stock.price.toFixed(2)}
+            </div>
+          </div>
+
+          {/* SCENARIO CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-caradoc-surface border border-rose-500/30 p-4 rounded-xl">
+              <div className="text-[11px] font-mono font-bold text-rose-400 uppercase">Bear Scenario</div>
+              <div className="text-2xl font-bold font-mono text-white mt-1">${bearRes.targetPrice}</div>
+              <div className="text-[10px] text-slate-400 mt-1">CAGR: <span className="text-rose-400 font-mono font-bold">{bearRes.annualizedCAGR}%</span></div>
+            </div>
+            <div className="bg-caradoc-surface border border-cyan-500/50 p-4 rounded-xl shadow-lg shadow-cyan-950/40">
+              <div className="text-[11px] font-mono font-bold text-cyan-400 uppercase">Base Case Scenario</div>
+              <div className="text-2xl font-bold font-mono text-white mt-1">${baseRes.targetPrice}</div>
+              <div className="text-[10px] text-slate-400 mt-1">CAGR: <span className="text-cyan-400 font-mono font-bold">{baseRes.annualizedCAGR}%</span></div>
+            </div>
+            <div className="bg-caradoc-surface border border-emerald-500/30 p-4 rounded-xl">
+              <div className="text-[11px] font-mono font-bold text-emerald-400 uppercase">Bull Scenario</div>
+              <div className="text-2xl font-bold font-mono text-white mt-1">${bullRes.targetPrice}</div>
+              <div className="text-[10px] text-slate-400 mt-1">CAGR: <span className="text-emerald-400 font-mono font-bold">{bullRes.annualizedCAGR}%</span></div>
+            </div>
+          </div>
+
+          {/* INPUT CONTROLS GRID */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-caradoc-surface border border-caradoc-border p-6 rounded-xl">
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Operational Compounding Sliders</h3>
+              
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Expected Annual Revenue CAGR</span>
+                  <span className="font-mono text-cyan-400 font-bold">{stock.proj.rev_cagr}%</span>
+                </div>
+                <input
+                  type="range" min="0" max="60" step="1"
+                  value={stock.proj.rev_cagr}
+                  onChange={(e) => onChange('rev_cagr', e.target.value)}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Target Net Profit Margin</span>
+                  <span className="font-mono text-cyan-400 font-bold">{stock.proj.target_margin}%</span>
+                </div>
+                <input
+                  type="range" min="2" max="55" step="0.5"
+                  value={stock.proj.target_margin}
+                  onChange={(e) => onChange('target_margin', e.target.value)}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Annual Share Count Change (Negative = Buybacks)</span>
+                  <span className="font-mono text-cyan-400 font-bold">{stock.proj.share_change_pct}%</span>
+                </div>
+                <input
+                  type="range" min="-8" max="10" step="0.5"
+                  value={stock.proj.share_change_pct}
+                  onChange={(e) => onChange('share_change_pct', e.target.value)}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Valuation & Hurdle Targets</h3>
+              
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Target Exit P/E Multiple</span>
+                  <span className="font-mono text-cyan-400 font-bold">{stock.proj.exit_pe}x</span>
+                </div>
+                <input
+                  type="range" min="8" max="70" step="1"
+                  value={stock.proj.exit_pe}
+                  onChange={(e) => onChange('exit_pe', e.target.value)}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-slate-400">Required Return Hurdle Rate (Annualized)</span>
+                  <span className="font-mono text-cyan-400 font-bold">{stock.proj.hurdle_rate}%</span>
+                </div>
+                <input
+                  type="range" min="5" max="35" step="1"
+                  value={stock.proj.hurdle_rate}
+                  onChange={(e) => onChange('hurdle_rate', e.target.value)}
+                  className="w-full accent-cyan-400 cursor-pointer"
+                />
+              </div>
+
+              <div className="pt-2 text-[11px] text-slate-400 leading-relaxed bg-caradoc-card p-3 rounded border border-caradoc-border">
+                *At <strong>{stock.proj.hurdle_rate}% Hurdle</strong>, your 5-year target price requires reaching 
+                <span className="text-cyan-400 font-mono font-bold"> ${(stock.price * Math.pow(1 + stock.proj.hurdle_rate/100, horizon)).toFixed(2)} </span> 
+                by Year {horizon}.
+              </div>
+            </div>
+          </div>
+
+          {/* YEAR-BY-YEAR COMPOUNDING TRAJECTORY TABLE */}
+          <div className="bg-caradoc-surface border border-caradoc-border rounded-xl overflow-hidden shadow-xl">
+            <div className="p-4 border-b border-caradoc-border font-bold text-xs uppercase tracking-wider text-slate-300">
+              Annual Compounding Progression (Year 0 → Year {horizon})
+            </div>
+            <table className="w-full text-xs text-left">
+              <thead className="bg-caradoc-card/80 border-b border-caradoc-border text-slate-400 uppercase text-[10px]">
+                <tr>
+                  <th className="p-3 pl-4">Year</th>
+                  <th className="p-3 text-right">Revenue ($M)</th>
+                  <th className="p-3 text-right">Net Income ($M)</th>
+                  <th className="p-3 text-right">Diluted Shares (M)</th>
+                  <th className="p-3 text-right">Market Cap ($M)</th>
+                  <th className="p-3 text-right pr-4">Implied Share Price</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-caradoc-border/50 font-mono">
+                {baseRes.trajectory.map(row => (
+                  <tr key={row.year} className="hover:bg-caradoc-card/30">
+                    <td className="p-3 pl-4 font-bold text-cyan-400">Yr {row.year}</td>
+                    <td className="p-3 text-right">${row.rev.toLocaleString()}M</td>
+                    <td className="p-3 text-right">${row.net.toLocaleString()}M</td>
+                    <td className="p-3 text-right">{row.shares}M</td>
+                    <td className="p-3 text-right">${row.cap.toLocaleString()}M</td>
+                    <td className="p-3 text-right pr-4 font-bold text-white">${row.price.toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 4: FINANCIAL BEDROCK (CHARTS) ---
+    function ChartsView({ stock }) {
+      const revCanvasRef = useRef(null);
+      const marginCanvasRef = useRef(null);
+
+      useEffect(() => {
+        let revChart, marginChart;
+        if (revCanvasRef.current && stock.historical) {
+          revChart = new Chart(revCanvasRef.current, {
+            type: 'bar',
+            data: {
+              labels: stock.historical.years,
+              datasets: [
+                {
+                  label: 'Revenue ($M)',
+                  data: stock.historical.revenue,
+                  backgroundColor: '#06B6D4'
+                },
+                {
+                  label: 'Net Income ($M)',
+                  data: stock.historical.netIncome,
+                  backgroundColor: '#10B981'
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { labels: { color: '#94A3B8' } } },
+              scales: {
+                x: { ticks: { color: '#94A3B8' }, grid: { color: '#232D42' } },
+                y: { ticks: { color: '#94A3B8' }, grid: { color: '#232D42' } }
+              }
+            }
+          });
+        }
+
+        if (marginCanvasRef.current && stock.historical) {
+          marginChart = new Chart(marginCanvasRef.current, {
+            type: 'line',
+            data: {
+              labels: stock.historical.years,
+              datasets: [{
+                label: 'Gross Profit Margin (%)',
+                data: stock.historical.grossMargin,
+                borderColor: '#F59E0B',
+                backgroundColor: '#F59E0B20',
+                fill: true,
+                tension: 0.3
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: { legend: { labels: { color: '#94A3B8' } } },
+              scales: {
+                x: { ticks: { color: '#94A3B8' }, grid: { color: '#232D42' } },
+                y: { ticks: { color: '#94A3B8' }, grid: { color: '#232D42' } }
+              }
+            }
+          });
+        }
+
+        return () => {
+          if (revChart) revChart.destroy();
+          if (marginChart) marginChart.destroy();
+        };
+      }, [stock]);
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white tracking-wide">FINANCIAL BEDROCK</h2>
+            <p className="text-xs text-slate-400">Historical performance trends for {stock.name}.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-caradoc-surface border border-caradoc-border p-5 rounded-xl shadow-lg">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Revenue vs. Net Income ($M)</h3>
+              <canvas ref={revCanvasRef}></canvas>
+            </div>
+            <div className="bg-caradoc-surface border border-caradoc-border p-5 rounded-xl shadow-lg">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-4">Gross Margin Expansion (%)</h3>
+              <canvas ref={marginCanvasRef}></canvas>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 5: LEAPS STOCK REPLACEMENT CALCULATOR ---
+    function LeapsView({ stock, horizon }) {
+      const [strike, setStrike] = useState(() => Math.round(stock.price * 0.70));
+      const [askPrice, setAskPrice] = useState(() => parseFloat((stock.price * 0.38).toFixed(2)));
+
+      const proj = calculateProjection(stock, stock.proj, horizon);
+      const targetStockPrice = proj.targetPrice;
+
+      // LEAPS Math
+      const contracts = 1;
+      const totalCostLEAPS = askPrice * 100 * contracts;
+      const totalCostShares = stock.price * 100 * contracts;
+      const capitalSaved = totalCostShares - totalCostLEAPS;
+      
+      const intrinsicAtTarget = Math.max(0, targetStockPrice - strike);
+      const valueAtTarget = intrinsicAtTarget * 100 * contracts;
+      const profitLEAPS = valueAtTarget - totalCostLEAPS;
+      const returnLEAPS = totalCostLEAPS > 0 ? (profitLEAPS / totalCostLEAPS) * 100 : 0;
+      
+      const profitShares = (targetStockPrice - stock.price) * 100 * contracts;
+      const returnShares = totalCostShares > 0 ? (profitShares / totalCostShares) * 100 : 0;
+
+      return (
+        <div className="space-y-6">
+          <div>
+            <h2 className="text-lg font-bold text-white tracking-wide">LEAPS STOCK REPLACEMENT CALCULATOR</h2>
+            <p className="text-xs text-slate-400">Model capital efficiency using deep ITM call options against your {horizon}-year target price.</p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-caradoc-surface border border-caradoc-border p-6 rounded-xl">
+            <div className="space-y-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Contract Parameters</h3>
+              
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Call Strike Price ($)</label>
+                <input
+                  type="number"
+                  value={strike}
+                  onChange={(e) => setStrike(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-caradoc-card border border-caradoc-border px-3 py-2 rounded text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-400 block mb-1">Contract Ask Price / Premium ($)</label>
+                <input
+                  type="number"
+                  step="0.05"
+                  value={askPrice}
+                  onChange={(e) => setAskPrice(parseFloat(e.target.value) || 0)}
+                  className="w-full bg-caradoc-card border border-caradoc-border px-3 py-2 rounded text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-500"
+                />
+              </div>
+
+              <div className="text-[11px] text-slate-400 bg-caradoc-card p-3 rounded border border-caradoc-border">
+                Synced Target Price (Yr {horizon}): <span className="text-cyan-400 font-mono font-bold">${targetStockPrice}</span>
+              </div>
+            </div>
+
+            {/* RETURN COMPARISON */}
+            <div className="bg-caradoc-card border border-caradoc-border p-5 rounded-lg space-y-4 font-mono">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-sans">Leverage & Return Showdown</h3>
+              
+              <div className="grid grid-cols-2 gap-4 pb-3 border-b border-caradoc-border text-center">
+                <div>
+                  <div className="text-[10px] text-slate-400 font-sans">LEAPS Total Return</div>
+                  <div className={`text-xl font-bold mt-1 ${returnLEAPS >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {returnLEAPS.toFixed(1)}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-400 font-sans">Shares Total Return</div>
+                  <div className={`text-xl font-bold mt-1 ${returnShares >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {returnShares.toFixed(1)}%
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Upfront Outlay:</span>
+                  <span className="text-cyan-400">${totalCostLEAPS.toFixed(2)} vs${totalCostShares.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Capital Preserved / Freed:</span>
+                  <span className="text-emerald-400 font-bold">${capitalSaved.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400 font-sans">Break-Even Stock Price:</span>
+                  <span className="text-slate-200">${(strike + askPrice).toFixed(2)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>
